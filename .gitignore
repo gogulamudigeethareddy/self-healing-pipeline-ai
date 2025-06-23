@@ -194,3 +194,4 @@ cython_debug/
 .cursorindexingignore
 frontend/node_modules/*
 self-healing-pipeline/*
+node_modules/*
