@@ -38,6 +38,30 @@ The demo simulates a JSON API data pull failure due to a schema mismatch (missin
 - Docker & Docker Compose
 - OpenAI API Key
 
+### Using Python 3.11 with pyenv and Virtual Environment
+
+Python 3.11 is recommended for this project. You can manage Python versions with [pyenv](https://github.com/pyenv/pyenv):
+
+```bash
+# Ensure Python 3.11 is installed via pyenv
+pyenv install 3.11.12
+
+# Set the local Python version for this project
+pyenv local 3.11.12
+
+# Create a virtual environment using Python 3.11
+/Users/geethareddy/.pyenv/versions/3.11.12/bin/python -m venv venv
+
+# Activate the virtual environment
+source venv/bin/activate
+```
+
+Once activated, install dependencies as usual:
+
+```bash
+pip install -r requirements.txt
+```
+
 ### Installation
 
 1. **Clone and setup environment:**
