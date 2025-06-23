@@ -1,0 +1,34 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "Unique employee identifier"
+    },
+    "name": {
+      "type": "string",
+      "description": "Employee full name"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Employee email address"
+    },
+    "department": {
+      "type": "string",
+      "description": "Employee department"
+    },
+    "salary": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Annual salary"
+    },
+    "hire_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when employee was hired"
+    }
+  },
+  "required": ["id", "name", "email", "department", "salary", "hire_date"],
+  "additionalProperties": false
+} 

@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "Alice Smith",
+    "email": "alice@example.com",
+    "department": "Engineering",
+    "salary": 120000,
+    "hire_date": "2020-01-15"
+  },
+  {
+    "id": 2,
+    "name": "Bob Jones",
+    "email": "bob@example.com",
+    "department": "Sales",
+    "salary": 95000,
+    "hire_date": "2019-03-22"
+  },
+  {
+    "id": 3,
+    "name": "Carol Lee",
+    "email": "carol@example.com",
+    "department": "HR",
+    "salary": 105000,
+    "hire_date": "2021-07-01"
+  },
+  {
+    "id": 4,
+    "name": "David Wilson",
+    "email": "david@example.com",
+    "department": "Marketing",
+    "salary": 110000,
+    "hire_date": "2020-11-10"
+  },
+  {
+    "id": 5,
+    "name": "Eva Brown",
+    "email": "eva@example.com",
+    "department": "Engineering",
+    "salary": 125000,
+    "hire_date": "2021-02-28"
+  }
+] 
