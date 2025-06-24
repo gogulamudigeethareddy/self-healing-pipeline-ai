@@ -106,34 +106,33 @@ class DiagnoseAgent:
                 allow_delegation=False,
                 llm=self.llm
             )
-            
             # Create diagnosis task
+            prompt = self._create_diagnosis_prompt(failure_data)
+            logger.info(f"[OpenAI] Sending prompt to LLM: {prompt}")
             diagnosis_task = Task(
-                description=self._create_diagnosis_prompt(failure_data),
+                description=prompt,
                 agent=diagnosis_agent,
                 expected_output="""A JSON object with:
                 - root_cause: string describing the root cause
-                - confidence: "low", "medium", or "high"
+                - confidence: \"low\", \"medium\", or \"high\"
                 - suggested_fixes: array of fix suggestions
-                - remediation_safety: "safe", "risky", or "unsafe"
+                - remediation_safety: \"safe\", \"risky\", or \"unsafe\"
                 - reasoning: detailed explanation
                 - requires_human_review: boolean"""
             )
-            
             # Create crew and execute
             crew = Crew(
                 agents=[diagnosis_agent],
                 tasks=[diagnosis_task],
                 verbose=True
             )
-            
+            logger.info("[OpenAI] Executing LLM diagnosis via CrewAI...")
             result = crew.kickoff()
-            
+            logger.info(f"[OpenAI] LLM raw result: {result}")
             # Parse AI response
             return self._parse_ai_diagnosis(result, failure_data)
-            
         except Exception as e:
-            logger.error(f"AI diagnosis failed: {str(e)}")
+            logger.error(f"[OpenAI] AI diagnosis failed: {str(e)}")
             return self._pattern_diagnose(failure_data)
     
     def _pattern_diagnose(self, failure_data: Dict[str, Any]) -> DiagnosisResult:
@@ -391,4 +390,4 @@ class DiagnoseAgent:
             'confidence_distribution': confidence_counts,
             'safety_distribution': safety_counts,
             'timestamp': now.isoformat()
-        } 
+        }

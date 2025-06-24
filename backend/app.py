@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
 import copy
+import enum
 
 # Import agents (assume these are implemented in ../agents/)
 import sys
@@ -57,18 +58,31 @@ def safe_dict(obj, _depth=0, _max_depth=10, _visited=None):
     else:
         return str(obj)
 
-def serialize_obj(obj):
+def serialize_obj(obj, _visited=None, _depth=0, _max_depth=10):
+    if _visited is None:
+        _visited = set()
+    if _depth > _max_depth:
+        return str(obj)
+    obj_id = id(obj)
+    if obj_id in _visited:
+        return str(obj)
+    _visited.add(obj_id)
     if hasattr(obj, 'to_dict'):
         return obj.to_dict()
     elif hasattr(obj, '__dict__'):
-        d = copy.deepcopy(obj.__dict__)
-        for k, v in d.items():
-            if hasattr(v, 'value'):
-                d[k] = v.value
-        return d
+        return {k: serialize_obj(v, _visited, _depth+1, _max_depth) for k, v in obj.__dict__.items()}
+    elif isinstance(obj, dict):
+        return {k: serialize_obj(v, _visited, _depth+1, _max_depth) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [serialize_obj(v, _visited, _depth+1, _max_depth) for v in obj]
     elif hasattr(obj, 'value'):
         return obj.value
-    return obj
+    elif isinstance(obj, enum.Enum):
+        return obj.name
+    elif isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    else:
+        return str(obj)
 
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
@@ -124,7 +138,9 @@ def get_logs():
 @app.route('/api/status', methods=['GET'])
 def get_status():
     """Return recent pipeline run status and agent actions"""
-    return jsonify({'pipeline_runs': pipeline_runs[-20:]})
+    # Ensure all runs are serializable
+    serialized_runs = [serialize_obj(run) for run in pipeline_runs[-20:]]
+    return jsonify({'pipeline_runs': serialized_runs})
 
 @app.route('/api/feedback', methods=['POST'])
 def post_feedback():
@@ -172,6 +188,11 @@ def verify_fix():
 def rollback():
     # Simulate rollback (no-op for demo)
     return jsonify({'status': 'rolled back'})
+
+@app.route('/', methods=['GET'])
+def health_check():
+    """Health check endpoint for root URL."""
+    return jsonify({'status': 'ok', 'message': 'Flask API is running'}), 200
 
 @app.after_request
 def after_request(response):

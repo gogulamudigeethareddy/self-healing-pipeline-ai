@@ -321,15 +321,9 @@ class FixAgent:
     def _execute_schema_update(self, fix_action: FixAction, failure_data: Dict[str, Any]) -> bool:
         """Execute schema update fix"""
         try:
-            # Update the schema in the DAG
             dag_id = fix_action.parameters.get('dag_id')
             task_id = fix_action.parameters.get('task_id')
-            
-            # In a real implementation, this would update the actual DAG file
-            # For demo purposes, we'll simulate success
-            logger.info(f"Updating schema for DAG {dag_id}, task {task_id}")
-            
-            # Simulate API call to update schema
+            logger.info(f"[FixAgent] Preparing to update schema for DAG {dag_id}, task {task_id}")
             update_url = f"{self.flask_api_url}/api/update_schema"
             payload = {
                 'dag_id': dag_id,
@@ -337,91 +331,82 @@ class FixAgent:
                 'action': 'update_schema',
                 'timestamp': datetime.now().isoformat()
             }
-            
+            logger.info(f"[FixAgent] Sending schema update request to {update_url} with payload: {payload}")
             response = requests.post(update_url, json=payload, timeout=30)
+            logger.info(f"[FixAgent] Schema update response: {response.status_code} {response.text}")
             return response.status_code == 200
-            
         except Exception as e:
-            logger.error(f"Schema update failed: {str(e)}")
+            logger.error(f"[FixAgent] Schema update failed: {str(e)}")
             return False
     
     def _execute_data_transformation(self, fix_action: FixAction, failure_data: Dict[str, Any]) -> bool:
         """Execute data transformation fix"""
         try:
             transform_type = fix_action.parameters.get('transform_type', 'unknown')
-            logger.info(f"Adding data transformation: {transform_type}")
-            
-            # Simulate adding transformation logic
+            logger.info(f"[FixAgent] Adding data transformation: {transform_type}")
             transform_url = f"{self.flask_api_url}/api/add_transformation"
             payload = {
                 'transform_type': transform_type,
                 'parameters': fix_action.parameters,
                 'timestamp': datetime.now().isoformat()
             }
-            
+            logger.info(f"[FixAgent] Sending data transformation request to {transform_url} with payload: {payload}")
             response = requests.post(transform_url, json=payload, timeout=30)
+            logger.info(f"[FixAgent] Data transformation response: {response.status_code} {response.text}")
             return response.status_code == 200
-            
         except Exception as e:
-            logger.error(f"Data transformation failed: {str(e)}")
+            logger.error(f"[FixAgent] Data transformation failed: {str(e)}")
             return False
     
     def _execute_retry_task(self, fix_action: FixAction, failure_data: Dict[str, Any]) -> bool:
         """Execute task retry fix"""
         try:
-            dag_id = failure_data.get('dag_id')
-            task_id = failure_data.get('task_id')
-            execution_date = failure_data.get('execution_date')
-            
-            logger.info(f"Retrying task {task_id} in DAG {dag_id}")
-            
-            # Trigger task retry via Airflow API
-            retry_url = f"{self.airflow_api_url}/api/v1/dags/{dag_id}/dagRuns/{execution_date}/taskInstances/{task_id}/setState"
+            logger.info(f"[FixAgent] Retrying task with action: {fix_action.parameters}")
+            retry_url = f"{self.flask_api_url}/api/retry_task"
             payload = {
-                'state': 'running'
-            }
-            
-            response = requests.post(retry_url, json=payload, timeout=30)
-            return response.status_code == 200
-            
-        except Exception as e:
-            logger.error(f"Task retry failed: {str(e)}")
-            return False
-    
-    def _execute_config_update(self, fix_action: FixAction, failure_data: Dict[str, Any]) -> bool:
-        """Execute configuration update fix"""
-        try:
-            config_url = f"{self.flask_api_url}/api/update_config"
-            payload = {
-                'config_type': 'timeout',
                 'parameters': fix_action.parameters,
                 'timestamp': datetime.now().isoformat()
             }
-            
-            response = requests.post(config_url, json=payload, timeout=30)
+            logger.info(f"[FixAgent] Sending retry task request to {retry_url} with payload: {payload}")
+            response = requests.post(retry_url, json=payload, timeout=30)
+            logger.info(f"[FixAgent] Retry task response: {response.status_code} {response.text}")
             return response.status_code == 200
-            
         except Exception as e:
-            logger.error(f"Config update failed: {str(e)}")
+            logger.error(f"[FixAgent] Retry task failed: {str(e)}")
             return False
-    
-    def _execute_manual_intervention(self, fix_action: FixAction, failure_data: Dict[str, Any]) -> bool:
-        """Execute manual intervention notification"""
+
+    def _execute_config_update(self, fix_action: FixAction, failure_data: Dict[str, Any]) -> bool:
+        """Execute config update fix"""
         try:
-            # Send notification for manual intervention
-            notify_url = f"{self.flask_api_url}/api/notify"
+            logger.info(f"[FixAgent] Updating config with action: {fix_action.parameters}")
+            config_url = f"{self.flask_api_url}/api/update_config"
             payload = {
-                'type': 'manual_intervention',
-                'priority': fix_action.parameters.get('priority', 'medium'),
-                'failure_data': failure_data,
+                'parameters': fix_action.parameters,
                 'timestamp': datetime.now().isoformat()
             }
-            
-            response = requests.post(notify_url, json=payload, timeout=30)
+            logger.info(f"[FixAgent] Sending config update request to {config_url} with payload: {payload}")
+            response = requests.post(config_url, json=payload, timeout=30)
+            logger.info(f"[FixAgent] Config update response: {response.status_code} {response.text}")
             return response.status_code == 200
-            
         except Exception as e:
-            logger.error(f"Manual intervention notification failed: {str(e)}")
+            logger.error(f"[FixAgent] Config update failed: {str(e)}")
+            return False
+
+    def _execute_manual_intervention(self, fix_action: FixAction, failure_data: Dict[str, Any]) -> bool:
+        """Notify for manual intervention"""
+        try:
+            logger.info(f"[FixAgent] Notifying for manual intervention: {fix_action.parameters}")
+            notify_url = f"{self.flask_api_url}/api/notify"
+            payload = {
+                'parameters': fix_action.parameters,
+                'timestamp': datetime.now().isoformat()
+            }
+            logger.info(f"[FixAgent] Sending manual intervention notification to {notify_url} with payload: {payload}")
+            response = requests.post(notify_url, json=payload, timeout=30)
+            logger.info(f"[FixAgent] Manual intervention response: {response.status_code} {response.text}")
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"[FixAgent] Manual intervention notification failed: {str(e)}")
             return False
     
     def _verify_fix(self, fix_action: FixAction, failure_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -549,4 +534,4 @@ class FixAgent:
             'type_distribution': type_counts,
             'success_rate': len([f for f in recent_fixes if f.success]) / len(recent_fixes) if recent_fixes else 0,
             'timestamp': now.isoformat()
-        } 
+        }

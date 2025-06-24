@@ -183,20 +183,18 @@ class MonitorAgent:
         """
         try:
             diagnosis_url = f"{self.api_base_url}/api/diagnose"
-            
             payload = {
                 'failure_event': failure_event.__dict__,
                 'failure_history': [f.__dict__ for f in self.failure_history[-10:]],  # Last 10 failures
                 'timestamp': datetime.now().isoformat()
             }
-            
+            logger.info(f"[MonitorAgent] Sending diagnosis request to {diagnosis_url} with payload: {payload}")
             response = requests.post(diagnosis_url, json=payload, timeout=30)
+            logger.info(f"[MonitorAgent] Diagnosis response: {response.status_code} {response.text}")
             response.raise_for_status()
-            
             return response.json()
-            
         except Exception as e:
-            logger.error(f"Failed to trigger diagnosis: {str(e)}")
+            logger.error(f"[MonitorAgent] Failed to trigger diagnosis: {str(e)}")
             return {
                 'status': 'error',
                 'message': f"Failed to trigger diagnosis: {str(e)}"
@@ -235,4 +233,4 @@ class MonitorAgent:
                 f"{failure.dag_id}_{failure.task_id}_{failure.execution_date}" == failure_id):
                 failure.resolved = True
                 return True
-        return False 
+        return False

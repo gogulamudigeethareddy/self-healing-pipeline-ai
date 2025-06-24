@@ -56,7 +56,7 @@ def fetch_api_data(**context) -> Dict[str, Any]:
     """
     try:
         # Simulate API call to get employee data
-        api_url = "http://localhost:5000/api/employees"
+        api_url = "http://backend:5000/api/employees"
         response = requests.get(api_url, timeout=30)
         response.raise_for_status()
         
@@ -190,7 +190,7 @@ def trigger_ai_webhook(error_message: str, context: Dict[str, Any]) -> None:
     Trigger webhook to notify AI agents of failure
     """
     try:
-        webhook_url = Variable.get("ai_webhook_url", default_var="http://localhost:5000/webhook")
+        webhook_url = Variable.get("ai_webhook_url", default_var="http://backend:5000/webhook")
         
         payload = {
             'dag_id': context['dag'].dag_id,
@@ -260,4 +260,4 @@ load_task = PythonOperator(
 )
 
 # Define task dependencies
-fetch_task >> validate_task >> transform_task >> load_task 
+fetch_task >> validate_task >> transform_task >> load_task
