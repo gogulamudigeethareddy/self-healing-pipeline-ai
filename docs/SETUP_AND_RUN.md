@@ -19,6 +19,8 @@
 ## 1. Overview
 This guide walks you through setting up, running, and demoing the AI-Powered Self-Healing Data Pipeline on your local machine. The system uses Apache Airflow, Flask, React, and AI agents (CrewAI/LangChain + OpenAI GPT-4) to automatically detect, diagnose, and fix data pipeline failures.
 
+> **Note:** If you use GitHub Copilot, please review `.github/copilot-instructions.md` for workspace-specific best practices and coding standards.
+
 ### Key Features
 - **Real-time Monitoring**: Continuous pipeline health checks
 - **Intelligent Diagnosis**: AI-powered root cause analysis
@@ -75,6 +77,8 @@ self-healing-pipeline-ai/
 │   └── sample_employees.json
 ├── 📁 logs/                     # Pipeline logs
 │   └── pipeline.log
+├── .github/                     # GitHub-specific files
+│   └── copilot-instructions.md # Copilot and automation guidelines
 ```
 
 ---

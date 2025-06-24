@@ -130,6 +130,8 @@ self-healing-pipeline-ai/
 │   └── sample_employees.json
 ├── logs/                     # Pipeline logs
 │   └── pipeline.log
+└── .github/                  # Project automation and Copilot instructions
+    └── copilot-instructions.md
 ```
 
 ## 🎭 Demo Script
@@ -172,3 +174,5 @@ Welcome to the contributions! To get started:
 6. Open a pull request with a clear description of your changes.
 
 Please review existing issues and pull requests to avoid duplication. For major changes, open an issue first to discuss your proposal.
+
+- **Copilot Users**: Please review `.github/copilot-instructions.md` for workspace-specific Copilot usage guidelines before submitting code.
