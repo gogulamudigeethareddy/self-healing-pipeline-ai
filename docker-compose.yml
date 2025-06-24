@@ -41,6 +41,7 @@ services:
       timeout: 10s
       retries: 5
     restart: always
+    command: webserver
 
   # Airflow Scheduler
   airflow-scheduler:
@@ -79,6 +80,7 @@ services:
       timeout: 10s
       retries: 5
     restart: always
+    command: scheduler
 
   # PostgreSQL Database
   postgres:

@@ -28,6 +28,26 @@ fix_agent = FixAgent()
 pipeline_runs = []
 feedback_list = []
 
+def safe_dict(obj, _depth=0, _max_depth=10, _visited=None):
+    """Helper function to recursively convert non-serializable objects to strings, with depth and cycle protection."""
+    if _visited is None:
+        _visited = set()
+    if _depth > _max_depth:
+        return str(obj)
+    if id(obj) in _visited:
+        return str(obj)
+    _visited.add(id(obj))
+    if hasattr(obj, '__dict__'):
+        return {k: safe_dict(v, _depth+1, _max_depth, _visited) for k, v in obj.__dict__.items()}
+    elif isinstance(obj, dict):
+        return {k: safe_dict(v, _depth+1, _max_depth, _visited) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [safe_dict(v, _depth+1, _max_depth, _visited) for v in obj]
+    elif isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    else:
+        return str(obj)
+
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
     """Mock API endpoint for Airflow DAG to pull data from"""
@@ -57,15 +77,15 @@ def webhook():
     # Log pipeline run
     pipeline_runs.append({
         'event': data,
-        'monitor': monitor_result,
-        'diagnosis': diagnosis_result.__dict__ if diagnosis_result else None,
-        'fix': fix_result.__dict__ if fix_result else None,
+        'monitor': safe_dict(monitor_result),
+        'diagnosis': safe_dict(diagnosis_result) if diagnosis_result else None,
+        'fix': safe_dict(fix_result) if fix_result else None,
         'timestamp': datetime.now().isoformat()
     })
     return jsonify({
-        'monitor': monitor_result,
-        'diagnosis': diagnosis_result.__dict__ if diagnosis_result else None,
-        'fix': fix_result.__dict__ if fix_result else None
+        'monitor': safe_dict(monitor_result),
+        'diagnosis': safe_dict(diagnosis_result) if diagnosis_result else None,
+        'fix': safe_dict(fix_result) if fix_result else None
     })
 
 @app.route('/api/logs', methods=['GET'])
@@ -131,4 +151,4 @@ def rollback():
     return jsonify({'status': 'rolled back'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv('FLASK_PORT', 5000)), debug=True) 
+    app.run(host='0.0.0.0', port=int(os.getenv('FLASK_PORT', 5000)), debug=True)
