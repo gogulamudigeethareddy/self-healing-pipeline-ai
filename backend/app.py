@@ -6,7 +6,8 @@ from datetime import datetime
 
 # Import agents (assume these are implemented in ../agents/)
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../agents')))
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'agents'))
 from monitor_agent import MonitorAgent
 from diagnose_agent import DiagnoseAgent
 from fix_agent import FixAgent
@@ -17,7 +18,14 @@ CORS(app)
 # Setup logging
 if not os.path.exists('logs'):
     os.makedirs('logs')
-logging.basicConfig(filename='logs/pipeline.log', level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[
+        logging.FileHandler('logs/pipeline.log'),
+        logging.StreamHandler()
+    ]
+)
 
 # Instantiate agents
 monitor_agent = MonitorAgent()
@@ -51,9 +59,9 @@ def safe_dict(obj, _depth=0, _max_depth=10, _visited=None):
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
     """Mock API endpoint for Airflow DAG to pull data from"""
-    # You can simulate schema errors by removing a field here for demo
+    # Simulate schema error by removing 'id' field from the first employee
     employees = [
-        {"id": 1, "name": "Alice Smith", "email": "alice@example.com", "department": "Engineering", "salary": 120000, "hire_date": "2020-01-15"},
+        {"name": "Alice Smith", "email": "alice@example.com", "department": "Engineering", "salary": 120000, "hire_date": "2020-01-15"},
         {"id": 2, "name": "Bob Jones", "email": "bob@example.com", "department": "Sales", "salary": 95000, "hire_date": "2019-03-22"},
         {"id": 3, "name": "Carol Lee", "email": "carol@example.com", "department": "HR", "salary": 105000, "hire_date": "2021-07-01"}
     ]
@@ -64,6 +72,7 @@ def webhook():
     """Receives failure events from Airflow and triggers agentic workflow"""
     data = request.json
     logging.info(f"Received webhook: {data}")
+    print(f"[DEBUG] Received webhook: {data}")  # <-- Add debug print for visibility
     # 1. Monitor agent processes the failure
     monitor_result = monitor_agent.process_webhook(data)
     # 2. If diagnosis triggered, run diagnosis and fix
@@ -82,6 +91,7 @@ def webhook():
         'fix': safe_dict(fix_result) if fix_result else None,
         'timestamp': datetime.now().isoformat()
     })
+    print(f"[DEBUG] pipeline_runs updated: {pipeline_runs[-1]}")  # <-- Add debug print for visibility
     return jsonify({
         'monitor': safe_dict(monitor_result),
         'diagnosis': safe_dict(diagnosis_result) if diagnosis_result else None,
@@ -149,6 +159,12 @@ def verify_fix():
 def rollback():
     # Simulate rollback (no-op for demo)
     return jsonify({'status': 'rolled back'})
+
+@app.after_request
+def after_request(response):
+    # Log every request to the log file and console
+    logging.info(f"{request.remote_addr} - - [{datetime.now().strftime('%d/%b/%Y %H:%M:%S')}] \"{request.method} {request.path} {request.environ.get('SERVER_PROTOCOL')}\" {response.status_code} -")
+    return response
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv('FLASK_PORT', 5000)), debug=True)
