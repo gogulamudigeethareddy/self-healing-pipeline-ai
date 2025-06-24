@@ -100,14 +100,36 @@ python scripts/demo.py
 
 ```
 self-healing-pipeline-ai/
-├── airflow/                 # Airflow DAGs and configurations
-├── backend/                 # Flask API server
-├── frontend/               # React dashboard
-├── agents/                 # AI agent implementations
-├── scripts/                # Demo and utility scripts
-├── data/                   # Sample data and schemas
-├── docs/                   # Documentation and presentations
-└── docker-compose.yml      # Service orchestration
+├── airflow/                  # Airflow DAGs and configurations
+│   └── dags/
+│       └── self_healing_pipeline.py
+├── agents/                   # AI agent implementations
+│   ├── monitor_agent.py      # Failure detection agent
+│   ├── diagnose_agent.py     # Root cause analysis agent
+│   └── fix_agent.py          # Auto-remediation agent
+├── backend/                  # Flask API server
+│   ├── app.py                # Main API endpoints
+│   ├── requirements.txt      # Backend dependencies
+│   └── logs/                 # Backend logs
+├── frontend/                 # React dashboard
+│   └── src/
+│       ├── App.tsx
+│       ├── index.tsx
+│       ├── setupProxy.js
+│       └── components/
+│           ├── StatusView.tsx
+│           ├── AgentLogs.tsx
+│           ├── TimelineView.tsx
+│           └── FeedbackForm.tsx
+├── scripts/                  # Utility scripts
+│   ├── demo.py               # Demo runner
+│   ├── start_services.sh     # Start all services
+│   └── stop_services.sh      # Stop all services
+├── data/                     # Sample data and schema
+│   ├── expected_schema.json
+│   └── sample_employees.json
+├── logs/                     # Pipeline logs
+│   └── pipeline.log
 ```
 
 ## 🎭 Demo Script
@@ -140,8 +162,13 @@ self-healing-pipeline-ai/
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+Welcome to the contributions! To get started:
+
+1. Fork this repository to your own GitHub account.
+2. Create a new branch for your feature or bugfix.
+3. Make your changes and ensure they follow the project's coding standards.
+4. Add or update tests as needed.
+5. Commit and push your changes to your fork.
+6. Open a pull request with a clear description of your changes.
+
+Please review existing issues and pull requests to avoid duplication. For major changes, open an issue first to discuss your proposal.

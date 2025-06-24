@@ -29,18 +29,37 @@ The AI-Powered Self-Healing Data Pipeline is a comprehensive system that automat
 
 ### 2.1. Data Pipeline Layer (Apache Airflow)
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Apache Airflow                           │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │ Fetch Data  │→│ Validate    │→│ Transform   │         │
-│  │ (API)       │  │ Schema      │  │ Data        │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-│           ↓              ↓              ↓                  │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │                    Load Data                            │ │
-│  └─────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+self-healing-pipeline-ai/
+├── airflow/
+│   └── dags/
+│       └── self_healing_pipeline.py
+├── agents/
+│   ├── monitor_agent.py
+│   ├── diagnose_agent.py
+│   └── fix_agent.py
+├── backend/
+│   ├── app.py
+│   ├── requirements.txt
+│   └── logs/
+├── frontend/
+│   └── src/
+│       ├── App.tsx
+│       ├── index.tsx
+│       ├── setupProxy.js
+│       └── components/
+│           ├── StatusView.tsx
+│           ├── AgentLogs.tsx
+│           ├── TimelineView.tsx
+│           └── FeedbackForm.tsx
+├── scripts/
+│   ├── demo.py
+│   ├── start_services.sh
+│   └── stop_services.sh
+├── data/
+│   ├── expected_schema.json
+│   └── sample_employees.json
+├── logs/
+│   └── pipeline.log
 ```
 
 **Components:**
@@ -384,4 +403,4 @@ def apply_fix(diagnosis_result, failure_data):
 
 ---
 
-This architecture provides a solid foundation for a production-ready, self-healing data pipeline system that can scale with business needs while maintaining security and observability. 
+This architecture provides a solid foundation for a production-ready, self-healing data pipeline system that can scale with business needs while maintaining security and observability.

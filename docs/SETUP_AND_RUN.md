@@ -45,40 +45,36 @@ This guide walks you through setting up, running, and demoing the AI-Powered Sel
 ## 3. Project Structure
 ```
 self-healing-pipeline-ai/
-├── 📁 airflow/                    # Airflow DAGs and configurations
+├── 📁 airflow/                  # Airflow DAGs and configurations
 │   └── dags/
 │       └── self_healing_pipeline.py
-├── 📁 agents/                     # AI agent implementations
-│   ├── monitor_agent.py           # Failure detection agent
-│   ├── diagnose_agent.py          # Root cause analysis agent
-│   └── fix_agent.py               # Auto-remediation agent
-├── 📁 backend/                    # Flask API server
-│   └── app.py                     # Main API endpoints
-├── 📁 frontend/                   # React dashboard
-│   ├── src/
-│   │   ├── components/            # React components
-│   │   │   ├── StatusView.tsx     # Pipeline status
-│   │   │   ├── TimelineView.tsx   # Failure timeline
-│   │   │   ├── AgentLogs.tsx      # Agent reasoning logs
-│   │   │   └── FeedbackForm.tsx   # User feedback
-│   │   ├── App.tsx                # Main app component
-│   │   └── index.tsx              # App entry point
-│   ├── package.json               # Node.js dependencies
-│   └── tsconfig.json              # TypeScript config
-├── 📁 data/                       # Sample data and schemas
-│   ├── sample_employees.json      # Test data
-│   └── expected_schema.json       # Schema definition
-├── 📁 scripts/                    # Utility scripts
-│   ├── demo.py                    # Demo simulation script
-│   ├── start_services.sh          # Service startup script
-│   └── stop_services.sh           # Service shutdown script
-├── 📁 docs/                       # Documentation
-│   └── SETUP_AND_RUN.md           # This file
-├── 📁 logs/                       # Application logs
-├── requirements.txt               # Python dependencies
-├── docker-compose.yml             # Service orchestration
-├── env.example                    # Environment template
-└── README.md                      # Project overview
+├── 📁 agents/                   # AI agent implementations
+│   ├── monitor_agent.py      # Failure detection agent
+│   ├── diagnose_agent.py     # Root cause analysis agent
+│   └── fix_agent.py          # Auto-remediation agent
+├── 📁 backend/                  # Flask API server
+│   ├── app.py                # Main API endpoints
+│   ├── requirements.txt      # Backend dependencies
+│   └── logs/                 # Backend logs
+├── 📁 frontend/                 # React dashboard
+│   └── src/
+│       ├── App.tsx
+│       ├── index.tsx
+│       ├── setupProxy.js
+│       └── components/
+│           ├── StatusView.tsx
+│           ├── AgentLogs.tsx
+│           ├── TimelineView.tsx
+│           └── FeedbackForm.tsx
+├── 📁 scripts/                  # Utility scripts
+│   ├── demo.py               # Demo runner
+│   ├── start_services.sh     # Start all services
+│   └── stop_services.sh      # Stop all services
+├── 📁 data/                     # Sample data and schema
+│   ├── expected_schema.json
+│   └── sample_employees.json
+├── 📁 logs/                     # Pipeline logs
+│   └── pipeline.log
 ```
 
 ---
@@ -497,4 +493,4 @@ cd backend && python app.py
 
 ---
 
-**For questions or issues, open an issue on GitHub or contact the project maintainer.** 
+**For questions or issues, open an issue on GitHub or contact the project maintainer.**
