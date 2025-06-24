@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Airflow Webserver
   airflow-webserver:
@@ -149,6 +147,19 @@ services:
     command: /bin/bash -c "pip install -r requirements.txt && python app.py"
     depends_on:
       - postgres
+
+  # Frontend Service
+  frontend:
+    image: node:18
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    working_dir: /app
+    command: /bin/bash -c "npm install && npm start"
+    depends_on:
+      - backend
 
 volumes:
   postgres-db-volume:

@@ -4,15 +4,8 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:5000',
+      target: 'http://backend:5000', // use Docker Compose service name
       changeOrigin: true,
     })
   );
-  app.use(
-    '/webhook',
-    createProxyMiddleware({
-      target: 'http://localhost:5000',
-      changeOrigin: true,
-    })
-  );
-}; 
+};

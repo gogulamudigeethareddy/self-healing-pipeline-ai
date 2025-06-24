@@ -3,14 +3,15 @@ import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
+import copy
 
 # Import agents (assume these are implemented in ../agents/)
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'agents'))
-from monitor_agent import MonitorAgent
-from diagnose_agent import DiagnoseAgent
-from fix_agent import FixAgent
+from agents.monitor_agent import MonitorAgent
+from agents.diagnose_agent import DiagnoseAgent
+from agents.fix_agent import FixAgent
 
 app = Flask(__name__)
 CORS(app)
@@ -56,6 +57,19 @@ def safe_dict(obj, _depth=0, _max_depth=10, _visited=None):
     else:
         return str(obj)
 
+def serialize_obj(obj):
+    if hasattr(obj, 'to_dict'):
+        return obj.to_dict()
+    elif hasattr(obj, '__dict__'):
+        d = copy.deepcopy(obj.__dict__)
+        for k, v in d.items():
+            if hasattr(v, 'value'):
+                d[k] = v.value
+        return d
+    elif hasattr(obj, 'value'):
+        return obj.value
+    return obj
+
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
     """Mock API endpoint for Airflow DAG to pull data from"""
@@ -72,7 +86,6 @@ def webhook():
     """Receives failure events from Airflow and triggers agentic workflow"""
     data = request.json
     logging.info(f"Received webhook: {data}")
-    print(f"[DEBUG] Received webhook: {data}")  # <-- Add debug print for visibility
     # 1. Monitor agent processes the failure
     monitor_result = monitor_agent.process_webhook(data)
     # 2. If diagnosis triggered, run diagnosis and fix
@@ -80,22 +93,22 @@ def webhook():
     fix_result = None
     if monitor_result.get('diagnosis_triggered'):
         diagnosis_result = diagnose_agent.diagnose_failure(data)
-        # For demo, convert dataclass to dict
-        diagnosis_dict = diagnosis_result.__dict__ if hasattr(diagnosis_result, '__dict__') else diagnosis_result
-        fix_result = fix_agent.apply_fix(diagnosis_dict, data)
-    # Log pipeline run
+        fix_result = fix_agent.apply_fix(
+            diagnosis_result.__dict__ if hasattr(diagnosis_result, '__dict__') else diagnosis_result,
+            data
+        )
+    # Log pipeline run with serialization
     pipeline_runs.append({
         'event': data,
-        'monitor': safe_dict(monitor_result),
-        'diagnosis': safe_dict(diagnosis_result) if diagnosis_result else None,
-        'fix': safe_dict(fix_result) if fix_result else None,
+        'monitor': serialize_obj(monitor_result),
+        'diagnosis': serialize_obj(diagnosis_result) if diagnosis_result else None,
+        'fix': serialize_obj(fix_result) if fix_result else None,
         'timestamp': datetime.now().isoformat()
     })
-    print(f"[DEBUG] pipeline_runs updated: {pipeline_runs[-1]}")  # <-- Add debug print for visibility
     return jsonify({
-        'monitor': safe_dict(monitor_result),
-        'diagnosis': safe_dict(diagnosis_result) if diagnosis_result else None,
-        'fix': safe_dict(fix_result) if fix_result else None
+        'monitor': serialize_obj(monitor_result),
+        'diagnosis': serialize_obj(diagnosis_result) if diagnosis_result else None,
+        'fix': serialize_obj(fix_result) if fix_result else None
     })
 
 @app.route('/api/logs', methods=['GET'])
@@ -166,5 +179,5 @@ def after_request(response):
     logging.info(f"{request.remote_addr} - - [{datetime.now().strftime('%d/%b/%Y %H:%M:%S')}] \"{request.method} {request.path} {request.environ.get('SERVER_PROTOCOL')}\" {response.status_code} -")
     return response
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv('FLASK_PORT', 5000)), debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
