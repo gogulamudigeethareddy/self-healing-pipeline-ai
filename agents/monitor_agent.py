@@ -74,7 +74,7 @@ class MonitorAgent:
                 
                 return {
                     'status': 'intervention_triggered',
-                    'failure_event': failure_event.__dict__,
+                    'failure_event': self.serialize_obj(failure_event),
                     'diagnosis_triggered': True,
                     'diagnosis_result': diagnosis_result,
                     'timestamp': datetime.now().isoformat()
@@ -82,7 +82,7 @@ class MonitorAgent:
             else:
                 return {
                     'status': 'monitored',
-                    'failure_event': failure_event.__dict__,
+                    'failure_event': self.serialize_obj(failure_event),
                     'intervention_triggered': False,
                     'timestamp': datetime.now().isoformat()
                 }
@@ -177,6 +177,19 @@ class MonitorAgent:
         
         return recent_failures
     
+    def serialize_obj(self, obj):
+        """Recursively convert Enums in dicts/lists to their .value for JSON serialization."""
+        if isinstance(obj, Enum):
+            return obj.value
+        elif isinstance(obj, dict):
+            return {k: self.serialize_obj(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self.serialize_obj(i) for i in obj]
+        elif hasattr(obj, '__dict__'):
+            return self.serialize_obj(vars(obj))
+        else:
+            return obj
+
     def _trigger_diagnosis(self, failure_event: FailureEvent) -> Dict[str, Any]:
         """
         Trigger the diagnosis agent to analyze the failure
@@ -184,12 +197,13 @@ class MonitorAgent:
         try:
             diagnosis_url = f"{self.api_base_url}/api/diagnose"
             payload = {
-                'failure_event': failure_event.__dict__,
-                'failure_history': [f.__dict__ for f in self.failure_history[-10:]],  # Last 10 failures
+                'failure_event': self.serialize_obj(failure_event),
+                'failure_history': [self.serialize_obj(f) for f in self.failure_history[-10:]],  # Last 10 failures
                 'timestamp': datetime.now().isoformat()
             }
-            logger.info(f"[MonitorAgent] Sending diagnosis request to {diagnosis_url} with payload: {payload}")
-            response = requests.post(diagnosis_url, json=payload, timeout=30)
+            serialized_payload = self.serialize_obj(payload)
+            logger.info(f"[MonitorAgent] Sending diagnosis request to {diagnosis_url} with payload: {serialized_payload}")
+            response = requests.post(diagnosis_url, json=serialized_payload, timeout=30)
             logger.info(f"[MonitorAgent] Diagnosis response: {response.status_code} {response.text}")
             response.raise_for_status()
             return response.json()

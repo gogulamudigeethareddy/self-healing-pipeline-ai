@@ -340,8 +340,54 @@ class FixAgent:
             return False
     
     def _execute_data_transformation(self, fix_action: FixAction, failure_data: Dict[str, Any]) -> bool:
-        """Execute data transformation fix"""
+        """Execute data transformation fix. If action is add_default_values, patch sample_employees.json to add missing required fields with defaults."""
         try:
+            # Special case: add default values for missing fields in data/sample_employees.json
+            if fix_action.parameters.get('action') == 'add_default_values':
+                import os
+                schema_path = os.path.join(os.path.dirname(__file__), '../data/expected_schema.json')
+                data_path = os.path.join(os.path.dirname(__file__), '../data/sample_employees.json')
+                try:
+                    with open(schema_path, 'r') as f:
+                        schema = json.load(f)
+                    with open(data_path, 'r') as f:
+                        records = json.load(f)
+                except Exception as e:
+                    logger.error(f"[FixAgent] Failed to load schema or data: {str(e)}")
+                    return False
+
+                required_fields = schema.get('required', [])
+                properties = schema.get('properties', {})
+                changed = False
+                for i, record in enumerate(records):
+                    for field in required_fields:
+                        if field not in record:
+                            # Add sensible default based on type
+                            ftype = properties.get(field, {}).get('type', 'string')
+                            if ftype == 'integer':
+                                default = -1
+                            elif ftype == 'number':
+                                default = 0
+                            elif ftype == 'string':
+                                default = ''
+                            else:
+                                default = None
+                            record[field] = default
+                            logger.info(f"[FixAgent] Added missing field '{field}' with default '{default}' to record {i}")
+                            changed = True
+                if changed:
+                    try:
+                        with open(data_path, 'w') as f:
+                            json.dump(records, f, indent=2)
+                        logger.info(f"[FixAgent] Patched {data_path} with missing required fields.")
+                        return True
+                    except Exception as e:
+                        logger.error(f"[FixAgent] Failed to write patched data: {str(e)}")
+                        return False
+                else:
+                    logger.info(f"[FixAgent] No missing fields found; no patch needed.")
+                    return True
+            
             transform_type = fix_action.parameters.get('transform_type', 'unknown')
             logger.info(f"[FixAgent] Adding data transformation: {transform_type}")
             transform_url = f"{self.flask_api_url}/api/add_transformation"

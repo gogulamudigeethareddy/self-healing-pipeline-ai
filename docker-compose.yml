@@ -3,6 +3,8 @@ services:
   airflow-webserver:
     image: apache/airflow:2.7.3
     container_name: airflow-webserver
+    env_file:
+      - .env
     depends_on:
       - airflow-init
     environment:
@@ -45,6 +47,8 @@ services:
   airflow-scheduler:
     image: apache/airflow:2.7.3
     container_name: airflow-scheduler
+    env_file:
+      - .env
     depends_on:
       - airflow-webserver
     environment:
@@ -136,6 +140,8 @@ services:
   backend:
     image: python:3.11
     container_name: backend
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     volumes:
