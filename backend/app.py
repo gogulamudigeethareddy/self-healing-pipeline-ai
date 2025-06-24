@@ -3,13 +3,15 @@ import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
+import copy
 
 # Import agents (assume these are implemented in ../agents/)
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../agents')))
-from monitor_agent import MonitorAgent
-from diagnose_agent import DiagnoseAgent
-from fix_agent import FixAgent
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'agents'))
+from agents.monitor_agent import MonitorAgent
+from agents.diagnose_agent import DiagnoseAgent
+from agents.fix_agent import FixAgent
 
 app = Flask(__name__)
 CORS(app)
@@ -17,7 +19,14 @@ CORS(app)
 # Setup logging
 if not os.path.exists('logs'):
     os.makedirs('logs')
-logging.basicConfig(filename='logs/pipeline.log', level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[
+        logging.FileHandler('logs/pipeline.log'),
+        logging.StreamHandler()
+    ]
+)
 
 # Instantiate agents
 monitor_agent = MonitorAgent()
@@ -28,12 +37,45 @@ fix_agent = FixAgent()
 pipeline_runs = []
 feedback_list = []
 
+def safe_dict(obj, _depth=0, _max_depth=10, _visited=None):
+    """Helper function to recursively convert non-serializable objects to strings, with depth and cycle protection."""
+    if _visited is None:
+        _visited = set()
+    if _depth > _max_depth:
+        return str(obj)
+    if id(obj) in _visited:
+        return str(obj)
+    _visited.add(id(obj))
+    if hasattr(obj, '__dict__'):
+        return {k: safe_dict(v, _depth+1, _max_depth, _visited) for k, v in obj.__dict__.items()}
+    elif isinstance(obj, dict):
+        return {k: safe_dict(v, _depth+1, _max_depth, _visited) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [safe_dict(v, _depth+1, _max_depth, _visited) for v in obj]
+    elif isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    else:
+        return str(obj)
+
+def serialize_obj(obj):
+    if hasattr(obj, 'to_dict'):
+        return obj.to_dict()
+    elif hasattr(obj, '__dict__'):
+        d = copy.deepcopy(obj.__dict__)
+        for k, v in d.items():
+            if hasattr(v, 'value'):
+                d[k] = v.value
+        return d
+    elif hasattr(obj, 'value'):
+        return obj.value
+    return obj
+
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
     """Mock API endpoint for Airflow DAG to pull data from"""
-    # You can simulate schema errors by removing a field here for demo
+    # Simulate schema error by removing 'id' field from the first employee
     employees = [
-        {"id": 1, "name": "Alice Smith", "email": "alice@example.com", "department": "Engineering", "salary": 120000, "hire_date": "2020-01-15"},
+        {"name": "Alice Smith", "email": "alice@example.com", "department": "Engineering", "salary": 120000, "hire_date": "2020-01-15"},
         {"id": 2, "name": "Bob Jones", "email": "bob@example.com", "department": "Sales", "salary": 95000, "hire_date": "2019-03-22"},
         {"id": 3, "name": "Carol Lee", "email": "carol@example.com", "department": "HR", "salary": 105000, "hire_date": "2021-07-01"}
     ]
@@ -51,21 +93,22 @@ def webhook():
     fix_result = None
     if monitor_result.get('diagnosis_triggered'):
         diagnosis_result = diagnose_agent.diagnose_failure(data)
-        # For demo, convert dataclass to dict
-        diagnosis_dict = diagnosis_result.__dict__ if hasattr(diagnosis_result, '__dict__') else diagnosis_result
-        fix_result = fix_agent.apply_fix(diagnosis_dict, data)
-    # Log pipeline run
+        fix_result = fix_agent.apply_fix(
+            diagnosis_result.__dict__ if hasattr(diagnosis_result, '__dict__') else diagnosis_result,
+            data
+        )
+    # Log pipeline run with serialization
     pipeline_runs.append({
         'event': data,
-        'monitor': monitor_result,
-        'diagnosis': diagnosis_result.__dict__ if diagnosis_result else None,
-        'fix': fix_result.__dict__ if fix_result else None,
+        'monitor': serialize_obj(monitor_result),
+        'diagnosis': serialize_obj(diagnosis_result) if diagnosis_result else None,
+        'fix': serialize_obj(fix_result) if fix_result else None,
         'timestamp': datetime.now().isoformat()
     })
     return jsonify({
-        'monitor': monitor_result,
-        'diagnosis': diagnosis_result.__dict__ if diagnosis_result else None,
-        'fix': fix_result.__dict__ if fix_result else None
+        'monitor': serialize_obj(monitor_result),
+        'diagnosis': serialize_obj(diagnosis_result) if diagnosis_result else None,
+        'fix': serialize_obj(fix_result) if fix_result else None
     })
 
 @app.route('/api/logs', methods=['GET'])
@@ -130,5 +173,11 @@ def rollback():
     # Simulate rollback (no-op for demo)
     return jsonify({'status': 'rolled back'})
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv('FLASK_PORT', 5000)), debug=True) 
+@app.after_request
+def after_request(response):
+    # Log every request to the log file and console
+    logging.info(f"{request.remote_addr} - - [{datetime.now().strftime('%d/%b/%Y %H:%M:%S')}] \"{request.method} {request.path} {request.environ.get('SERVER_PROTOCOL')}\" {response.status_code} -")
+    return response
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

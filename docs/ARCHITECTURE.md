@@ -9,6 +9,7 @@
 6. [Security Considerations](#security-considerations)
 7. [Scalability](#scalability)
 8. [Monitoring & Observability](#monitoring--observability)
+9. [Copilot & Automation Instructions](#copilot--automation-instructions)
 
 ---
 
@@ -29,18 +30,37 @@ The AI-Powered Self-Healing Data Pipeline is a comprehensive system that automat
 
 ### 2.1. Data Pipeline Layer (Apache Airflow)
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Apache Airflow                           │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │ Fetch Data  │→│ Validate    │→│ Transform   │         │
-│  │ (API)       │  │ Schema      │  │ Data        │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-│           ↓              ↓              ↓                  │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │                    Load Data                            │ │
-│  └─────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+self-healing-pipeline-ai/
+├── airflow/
+│   └── dags/
+│       └── self_healing_pipeline.py
+├── agents/
+│   ├── monitor_agent.py
+│   ├── diagnose_agent.py
+│   └── fix_agent.py
+├── backend/
+│   ├── app.py
+│   ├── requirements.txt
+│   └── logs/
+├── frontend/
+│   └── src/
+│       ├── App.tsx
+│       ├── index.tsx
+│       ├── setupProxy.js
+│       └── components/
+│           ├── StatusView.tsx
+│           ├── AgentLogs.tsx
+│           ├── TimelineView.tsx
+│           └── FeedbackForm.tsx
+├── scripts/
+│   ├── demo.py
+│   ├── start_services.sh
+│   └── stop_services.sh
+├── data/
+│   ├── expected_schema.json
+│   └── sample_employees.json
+├── logs/
+│   └── pipeline.log
 ```
 
 **Components:**
@@ -339,26 +359,11 @@ def apply_fix(diagnosis_result, failure_data):
 
 ---
 
-## 9. Deployment Considerations
+## 9. Copilot & Automation Instructions
 
-### 9.1. Development Environment
-- **Local Setup**: Docker Compose for services
-- **Hot Reloading**: Development servers with auto-restart
-- **Debug Mode**: Detailed logging and error messages
-- **Mock Services**: Simulated external dependencies
-
-### 9.2. Production Environment
-- **Container Orchestration**: Kubernetes deployment
-- **Service Mesh**: Istio for service communication
-- **Database**: Managed PostgreSQL service
-- **Monitoring**: Prometheus + Grafana stack
-- **Logging**: ELK stack (Elasticsearch, Logstash, Kibana)
-
-### 9.3. Configuration Management
-- **Environment Variables**: Service configuration
-- **Secrets Management**: API keys and credentials
-- **Feature Flags**: Gradual rollout capabilities
-- **A/B Testing**: Agent strategy comparison
+- The `.github/copilot-instructions.md` file contains guidelines for using GitHub Copilot in this project.
+- All contributors using Copilot should review and follow these instructions for code consistency and best practices.
+- See also: [docs/SETUP_AND_RUN.md](SETUP_AND_RUN.md) and [README.md](../README.md) for setup and contribution details.
 
 ---
 
@@ -384,4 +389,4 @@ def apply_fix(diagnosis_result, failure_data):
 
 ---
 
-This architecture provides a solid foundation for a production-ready, self-healing data pipeline system that can scale with business needs while maintaining security and observability. 
+This architecture provides a solid foundation for a production-ready, self-healing data pipeline system that can scale with business needs while maintaining security and observability.
