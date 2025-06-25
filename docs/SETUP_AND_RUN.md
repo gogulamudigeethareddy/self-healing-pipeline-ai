@@ -167,334 +167,63 @@ cd ..
 
 ---
 
-## 6. Service Startup
+## 6. Running with Docker Compose (Recommended)
 
-### 6.1. Start Airflow (Docker)
-```bash
-# Start Airflow services
-docker-compose up -d airflow-webserver airflow-scheduler postgres redis airflow-init
-
-# Wait for initialization (30-60 seconds)
-sleep 30
-
-# Verify Airflow is running
-curl http://localhost:8080/health
-```
-
-**Airflow Access:**
-- **URL**: http://localhost:8080
-- **Username**: admin
-- **Password**: admin
-
-### 6.2. Start Flask Backend
-```bash
-cd backend
-python app.py
-```
-
-**Flask API Access:**
-- **URL**: http://localhost:5000
-- **Health Check**: http://localhost:5000/api/employees
-
-### 6.3. Start React Frontend
-```bash
-cd frontend
-npm start
-```
-
-**React Dashboard Access:**
-- **URL**: http://localhost:3000
-
----
-
-## 7. Running the Demo
-
-### 7.1. Automated Demo
-```bash
-# Run the complete demo script
-python scripts/demo.py
-```
-
-This script will:
-1. Check if services are running
-2. Simulate a schema validation error
-3. Trigger the agentic workflow
-4. Display results and logs
-5. Submit feedback
-
-### 7.2. Manual Demo Steps
-
-#### Step 1: Verify Pipeline Success
-1. Open Airflow UI: http://localhost:8080
-2. Navigate to DAGs → self_healing_pipeline
-3. Trigger the DAG manually
-4. Verify all tasks complete successfully
-
-#### Step 2: Inject Failure
-1. Modify the API response in `backend/app.py`:
-   ```python
-   # Remove email field to simulate schema error
-   employees = [
-       {"id": 1, "name": "Alice Smith", "department": "Engineering", "salary": 120000, "hire_date": "2020-01-15"},
-       # ... remove email field from all records
-   ]
+1. **Start all services:**
+   ```sh
+   docker-compose up --build
    ```
+   This will start Airflow, backend, frontend, and supporting services.
 
-#### Step 3: Trigger Failure
-1. Restart Flask backend: `Ctrl+C` then `python app.py`
-2. Trigger the Airflow DAG again
-3. Observe the failure at schema validation step
-
-#### Step 4: Observe Self-Healing
-1. Check the webhook was triggered
-2. Monitor agent workflow in Flask logs
-3. View results in React dashboard
-4. Check if pipeline was fixed automatically
+2. **Access services:**
+   - Airflow UI: [http://localhost:8080](http://localhost:8080)
+   - Backend API: [http://localhost:5000](http://localhost:5000)
+   - Frontend: [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 8. Simulating Failures
-
-### 8.1. Schema Validation Error
-```python
-# In backend/app.py, modify the employees data:
-employees = [
-    {"id": 1, "name": "Alice Smith", "department": "Engineering", "salary": 120000, "hire_date": "2020-01-15"}
-    # Missing email field
-]
-```
-
-### 8.2. Data Type Error
-```python
-# Change salary to string instead of number:
-employees = [
-    {"id": 1, "name": "Alice Smith", "email": "alice@example.com", "department": "Engineering", "salary": "120000", "hire_date": "2020-01-15"}
-]
-```
-
-### 8.3. Connection Error
-```bash
-# Stop Flask backend to simulate API downtime
-# Then trigger Airflow DAG
-```
-
-### 8.4. Manual Approval Required
-```bash
-# Set in .env file:
-REQUIRE_HUMAN_APPROVAL=True
-```
+## 7. Testing the Self-Healing Pipeline
+1. **Trigger the DAG in Airflow UI** (`self_healing_pipeline`).
+2. The pipeline will fetch data, validate schema, and (if a failure is detected) trigger the self-healing loop via the backend webhook.
+3. The FixAgent will patch `data/sample_employees.json` if needed.
+4. On the next run, the pipeline should succeed end-to-end.
 
 ---
 
-## 9. Agentic Workflow
-
-### 9.1. Monitor Agent
-- **Purpose**: Detects failures and determines severity
-- **Triggers**: Webhook from Airflow on task failure
-- **Actions**: 
-  - Analyzes failure patterns
-  - Determines if intervention is needed
-  - Triggers diagnosis agent
-
-### 9.2. Diagnose Agent
-- **Purpose**: Analyzes root cause using AI
-- **Input**: Failure logs and error messages
-- **Output**: 
-  - Root cause analysis
-  - Suggested fixes
-  - Safety assessment
-
-### 9.3. Fix Agent
-- **Purpose**: Applies safe remediation strategies
-- **Strategies**:
-  - Retry failed task
-  - Update schema definition
-  - Add data transformation
-  - Request manual intervention
-
-### 9.4. Feedback Loop
-- Users can rate fix effectiveness
-- Feedback improves agent decision-making
-- Audit trail maintained for all actions
+## 8. Debugging & API Testing
+- See `docs/DEBUGGING.md` for troubleshooting steps, common issues, and Postman examples.
+- Logs are available in `backend/logs/pipeline.log` and via the API (`/api/logs`).
+- Use the Postman collection in `docs/postman_collection.json` to test endpoints.
+- Full API documentation with sample payloads: `docs/API_ENDPOINTS.md`
 
 ---
 
-## 10. Frontend Dashboard
-
-### 10.1. Status View
-- Current pipeline run status
-- Recent execution history
-- Success/failure metrics
-
-### 10.2. Timeline View
-- Chronological view of failures and fixes
-- Agent action timeline
-- Resolution tracking
-
-### 10.3. Agent Logs
-- Real-time agent reasoning
-- Decision-making process
-- Error analysis details
-
-### 10.4. Feedback Form
-- Rate fix effectiveness (1-5 stars)
-- Submit comments
-- Track user satisfaction
+## 9. Stopping and Cleaning Up
+- To stop all services:
+  ```sh
+  docker-compose down
+  ```
+- To remove all containers, networks, and volumes:
+  ```sh
+  docker-compose down -v
+  ```
 
 ---
 
-## 11. Troubleshooting
-
-### 11.1. Common Issues
-
-#### Airflow Not Starting
-```bash
-# Check Docker logs
-docker-compose logs airflow-webserver
-
-# Ensure ports are free
-lsof -i :8080
-lsof -i :5432
-lsof -i :6379
-
-# Reset Airflow
-docker-compose down -v
-docker-compose up -d airflow-init
-```
-
-#### Flask API Errors
-```bash
-# Check Python environment
-python --version
-pip list | grep flask
-
-# Check logs
-tail -f logs/pipeline.log
-
-# Verify .env configuration
-cat .env
-```
-
-#### React Dashboard Issues
-```bash
-# Check Node.js version
-node --version
-npm --version
-
-# Clear npm cache
-npm cache clean --force
-
-# Reinstall dependencies
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
-```
-
-#### Agent Not Responding
-```bash
-# Check OpenAI API key
-echo $OPENAI_API_KEY
-
-# Test API connectivity
-curl -H "Authorization: Bearer $OPENAI_API_KEY" \
-     https://api.openai.com/v1/models
-
-# Check agent logs
-tail -f logs/pipeline.log | grep -i agent
-```
-
-### 11.2. Port Conflicts
-```bash
-# Check what's using the ports
-lsof -i :5000  # Flask
-lsof -i :3000  # React
-lsof -i :8080  # Airflow
-
-# Kill processes if needed
-kill -9 <PID>
-```
-
-### 11.3. Docker Issues
-```bash
-# Clean up Docker
-docker system prune -a
-docker volume prune
-
-# Restart Docker Desktop
-# Then restart services
-```
+## 10. Updating Agents or Code
+- After editing code in `backend/`, `agents/`, or `airflow/dags/`, restart the affected containers:
+  ```sh
+  docker-compose restart backend airflow-webserver airflow-scheduler
+  ```
 
 ---
 
-## 12. Resetting the Demo
-
-### 12.1. Complete Reset
-```bash
-# Stop all services
-./scripts/stop_services.sh
-
-# Clean up data
-docker-compose down -v
-rm -rf airflow/logs airflow/dags/__pycache__ data/processed_*
-rm -f .flask_pid .react_pid
-
-# Restart from scratch
-./scripts/start_services.sh
-```
-
-### 12.2. Partial Reset
-```bash
-# Reset only pipeline state
-rm -rf airflow/logs/*
-
-# Reset agent history
-rm -f backend/pipeline_runs.json
-
-# Restart specific service
-cd backend && python app.py
-```
+## 11. Documentation Reference
+- **API Reference:** `docs/API_ENDPOINTS.md`
+- **Debugging Guide:** `docs/DEBUGGING.md`
+- **Postman Collection:** `docs/postman_collection.json`
+- **Architecture:** `docs/ARCHITECTURE.md`
 
 ---
 
-## 13. Further Reading
-
-### 13.1. Documentation
-- [README.md](../README.md) — Project overview and architecture
-- [agents/](../agents/) — AI agent source code and documentation
-- [airflow/dags/](../airflow/dags/) — Airflow pipeline definition
-- [backend/](../backend/) — Flask API implementation
-- [frontend/](../frontend/) — React dashboard implementation
-
-### 13.2. External Resources
-- [Apache Airflow Documentation](https://airflow.apache.org/docs/)
-- [CrewAI Documentation](https://docs.crewai.com/)
-- [React Documentation](https://reactjs.org/docs/)
-- [Flask Documentation](https://flask.palletsprojects.com/)
-
-### 13.3. API Endpoints
-- **Health Check**: `GET /api/employees`
-- **Webhook**: `POST /webhook`
-- **Status**: `GET /api/status`
-- **Logs**: `GET /api/logs`
-- **Feedback**: `POST /api/feedback`
-
----
-
-## 14. Support
-
-### 14.1. Getting Help
-- Check the troubleshooting section above
-- Review logs in `logs/pipeline.log`
-- Check service status at respective URLs
-- Open an issue on GitHub
-
-### 14.2. Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
----
-
-**For questions or issues, open an issue on GitHub or contact the project maintainer.**
+For questions, see the documentation in the `docs/` folder or contact the project maintainers.
