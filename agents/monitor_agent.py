@@ -24,8 +24,8 @@ class MonitorAgent:
     def __init__(self, api_base_url: str = "http://localhost:5000", openai_api_key: str = None):
         self.api_base_url = api_base_url
         self.failure_history: List[Dict[str, Any]] = []
-        self.alert_threshold = 3  # consecutive failures
-        self.time_window = timedelta(hours=24)
+        self.alert_threshold = 1  # consecutive failures
+        self.time_window = timedelta(hours=1)
         self.openai_api_key = openai_api_key
         self.llm = ChatOpenAI(model="gpt-4", temperature=0.1, api_key=openai_api_key) if CREWAI_AVAILABLE and openai_api_key else None
 
@@ -40,6 +40,18 @@ class MonitorAgent:
         return {"status": "monitored"}
 
     def _create_failure_event(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        # Defensive: ensure data is a dict before using .get
+        if not isinstance(data, dict):
+            logger.error(f"Expected dict for failure event, got {type(data)}: {data}")
+            return {
+                "dag_id": "unknown",
+                "task_id": "unknown",
+                "execution_date": "",
+                "error_message": str(data),
+                "error_type": "unknown",
+                "timestamp": datetime.now().isoformat(),
+                "resolved": False,
+            }
         return {
             "dag_id": data.get("dag_id", "unknown"),
             "task_id": data.get("task_id", "unknown"),
@@ -103,7 +115,8 @@ class MonitorAgent:
         try:
             url = f"{self.api_base_url}/api/diagnose"
             payload = {"failure_event": event, "history": self.failure_history[-10:]}
-            resp = requests.post(url, json=payload, timeout=10)
+            # Increase timeout to 30 seconds for Docker backend
+            resp = requests.post(url, json=payload, timeout=30)
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
