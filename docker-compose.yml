@@ -147,6 +147,7 @@ services:
     volumes:
       - ./backend:/app
       - ./agents:/app/agents
+      - ./data:/app/../data
     working_dir: /app
     environment:
       - FLASK_PORT=5000

@@ -201,7 +201,7 @@ def trigger_ai_webhook(error_message: str, context: Dict[str, Any]) -> None:
             'timestamp': datetime.now().isoformat()
         }
         
-        response = requests.post(webhook_url, json=payload, timeout=10)
+        response = requests.post(webhook_url, json=payload, timeout=60)
         response.raise_for_status()
         
         logger.info(f"Successfully triggered AI webhook: {response.status_code}")
