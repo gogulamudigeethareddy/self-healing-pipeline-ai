@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
 import copy
+import enum
 
 # Import agents (assume these are implemented in ../agents/)
 import sys
@@ -57,58 +58,111 @@ def safe_dict(obj, _depth=0, _max_depth=10, _visited=None):
     else:
         return str(obj)
 
-def serialize_obj(obj):
+def serialize_obj(obj, _visited=None, _depth=0, _max_depth=10):
+    if _visited is None:
+        _visited = set()
+    if _depth > _max_depth:
+        return str(obj)
+    obj_id = id(obj)
+    if obj_id in _visited:
+        return str(obj)
+    _visited.add(obj_id)
     if hasattr(obj, 'to_dict'):
         return obj.to_dict()
     elif hasattr(obj, '__dict__'):
-        d = copy.deepcopy(obj.__dict__)
-        for k, v in d.items():
-            if hasattr(v, 'value'):
-                d[k] = v.value
-        return d
+        return {k: serialize_obj(v, _visited, _depth+1, _max_depth) for k, v in obj.__dict__.items()}
+    elif isinstance(obj, dict):
+        return {k: serialize_obj(v, _visited, _depth+1, _max_depth) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [serialize_obj(v, _visited, _depth+1, _max_depth) for v in obj]
     elif hasattr(obj, 'value'):
         return obj.value
-    return obj
+    elif isinstance(obj, enum.Enum):
+        return obj.name
+    elif isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    else:
+        return str(obj)
 
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
-    """Mock API endpoint for Airflow DAG to pull data from"""
-    # Simulate schema error by removing 'id' field from the first employee
-    employees = [
-        {"name": "Alice Smith", "email": "alice@example.com", "department": "Engineering", "salary": 120000, "hire_date": "2020-01-15"},
-        {"id": 2, "name": "Bob Jones", "email": "bob@example.com", "department": "Sales", "salary": 95000, "hire_date": "2019-03-22"},
-        {"id": 3, "name": "Carol Lee", "email": "carol@example.com", "department": "HR", "salary": 105000, "hire_date": "2021-07-01"}
-    ]
+    """API endpoint for Airflow DAG to pull data from. Reads from data/sample_employees.json."""
+    import os
+    import json
+    data_path = os.path.join(os.path.dirname(__file__), '../data/sample_employees.json')
+    try:
+        with open(data_path, 'r') as f:
+            employees = json.load(f)
+    except Exception as e:
+        logging.error(f"Failed to read employee data: {e}")
+        employees = []
     return jsonify(employees)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     """Receives failure events from Airflow and triggers agentic workflow"""
+    import time
     data = request.json
     logging.info(f"Received webhook: {data}")
+    step_timings = {}
+    error_info = {}
+    start_time = time.time()
     # 1. Monitor agent processes the failure
-    monitor_result = monitor_agent.process_webhook(data)
+    try:
+        t0 = time.time()
+        monitor_result = monitor_agent.process_webhook(data)
+        t1 = time.time()
+        step_timings['monitor_agent'] = t1 - t0
+        logging.info(f"MonitorAgent completed in {step_timings['monitor_agent']:.2f}s: {serialize_obj(monitor_result)}")
+    except Exception as e:
+        error_info['monitor_agent'] = str(e)
+        logging.error(f"MonitorAgent error: {e}")
+        monitor_result = {'error': str(e)}
     # 2. If diagnosis triggered, run diagnosis and fix
     diagnosis_result = None
     fix_result = None
     if monitor_result.get('diagnosis_triggered'):
-        diagnosis_result = diagnose_agent.diagnose_failure(data)
-        fix_result = fix_agent.apply_fix(
-            diagnosis_result.__dict__ if hasattr(diagnosis_result, '__dict__') else diagnosis_result,
-            data
-        )
+        try:
+            t0 = time.time()
+            diagnosis_result = diagnose_agent.diagnose_failure(data)
+            t1 = time.time()
+            step_timings['diagnose_agent'] = t1 - t0
+            logging.info(f"DiagnoseAgent completed in {step_timings['diagnose_agent']:.2f}s: {serialize_obj(diagnosis_result)}")
+        except Exception as e:
+            error_info['diagnose_agent'] = str(e)
+            logging.error(f"DiagnoseAgent error: {e}")
+            diagnosis_result = {'error': str(e)}
+        try:
+            t0 = time.time()
+            fix_result = fix_agent.apply_fix(
+                diagnosis_result.__dict__ if hasattr(diagnosis_result, '__dict__') else diagnosis_result,
+                data
+            )
+            t1 = time.time()
+            step_timings['fix_agent'] = t1 - t0
+            logging.info(f"FixAgent completed in {step_timings['fix_agent']:.2f}s: {serialize_obj(fix_result)}")
+        except Exception as e:
+            error_info['fix_agent'] = str(e)
+            logging.error(f"FixAgent error: {e}")
+            fix_result = {'error': str(e)}
+    total_time = time.time() - start_time
+    logging.info(f"/webhook total execution time: {total_time:.2f}s | Step timings: {step_timings} | Errors: {error_info}")
     # Log pipeline run with serialization
     pipeline_runs.append({
         'event': data,
         'monitor': serialize_obj(monitor_result),
         'diagnosis': serialize_obj(diagnosis_result) if diagnosis_result else None,
         'fix': serialize_obj(fix_result) if fix_result else None,
+        'timings': step_timings,
+        'errors': error_info,
         'timestamp': datetime.now().isoformat()
     })
     return jsonify({
         'monitor': serialize_obj(monitor_result),
         'diagnosis': serialize_obj(diagnosis_result) if diagnosis_result else None,
-        'fix': serialize_obj(fix_result) if fix_result else None
+        'fix': serialize_obj(fix_result) if fix_result else None,
+        'timings': step_timings,
+        'errors': error_info
     })
 
 @app.route('/api/logs', methods=['GET'])
@@ -124,7 +178,9 @@ def get_logs():
 @app.route('/api/status', methods=['GET'])
 def get_status():
     """Return recent pipeline run status and agent actions"""
-    return jsonify({'pipeline_runs': pipeline_runs[-20:]})
+    # Ensure all runs are serializable
+    serialized_runs = [serialize_obj(run) for run in pipeline_runs[-20:]]
+    return jsonify({'pipeline_runs': serialized_runs})
 
 @app.route('/api/feedback', methods=['POST'])
 def post_feedback():
@@ -141,6 +197,14 @@ def post_feedback():
 def get_feedback():
     """Return feedback history"""
     return jsonify({'feedback': feedback_list[-20:]})
+
+@app.route('/api/diagnose', methods=['POST'])
+def api_diagnose():
+    """API endpoint to trigger diagnosis agent from external services (e.g., MonitorAgent)."""
+    data = request.json
+    logging.info(f"[API] Received diagnosis request: {data}")
+    result = diagnose_agent.diagnose_failure(data.get('failure_event', data))
+    return jsonify(serialize_obj(result)), 200
 
 # --- Endpoints for fix agent simulation (optional, for demo) ---
 @app.route('/api/update_schema', methods=['POST'])
@@ -172,6 +236,11 @@ def verify_fix():
 def rollback():
     # Simulate rollback (no-op for demo)
     return jsonify({'status': 'rolled back'})
+
+@app.route('/', methods=['GET'])
+def health_check():
+    """Health check endpoint for root URL."""
+    return jsonify({'status': 'ok', 'message': 'Flask API is running'}), 200
 
 @app.after_request
 def after_request(response):

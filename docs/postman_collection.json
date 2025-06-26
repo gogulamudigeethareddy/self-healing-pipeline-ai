@@ -1,0 +1,104 @@
+{
+  "info": {
+    "name": "Self-Healing Pipeline API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": [""]
+        }
+      }
+    },
+    {
+      "name": "Get Employees",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/employees",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "employees"]
+        }
+      }
+    },
+    {
+      "name": "Trigger Webhook",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dag_id\": \"self_healing_pipeline\",\n  \"task_id\": \"validate_schema\",\n  \"execution_date\": \"2025-06-24T22:02:10.072360+00:00\",\n  \"error_message\": \"Schema validation failed: Record 0: Missing required field 'id'\",\n  \"error_type\": \"schema_validation\",\n  \"timestamp\": \"2025-06-24T22:02:13.999934\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/webhook",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["webhook"]
+        }
+      }
+    },
+    {
+      "name": "Get Logs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/logs",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "logs"]
+        }
+      }
+    },
+    {
+      "name": "Get Pipeline Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/status",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "status"]
+        }
+      }
+    },
+    {
+      "name": "Trigger Diagnosis",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"failure_event\": {\n    \"dag_id\": \"self_healing_pipeline\",\n    \"task_id\": \"validate_schema\",\n    \"error_message\": \"Schema validation failed: Record 0: Missing required field 'id'\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/diagnose",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "diagnose"]
+        }
+      }
+    }
+  ]
+}

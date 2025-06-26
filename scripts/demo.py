@@ -111,20 +111,38 @@ def check_agent_workflow():
             
             if runs:
                 latest_run = runs[-1]
+                # Defensive: ensure latest_run is a dict
+                if not isinstance(latest_run, dict):
+                    print(f"❌ Error: latest_run is not a dict (type={type(latest_run)}): {latest_run}")
+                    return status
+                monitor = latest_run.get('monitor', {})
+                if isinstance(monitor, str):
+                    import json
+                    try:
+                        monitor = json.loads(monitor)
+                    except Exception:
+                        monitor = {'status': str(monitor)}
                 print(f"🕒 Latest run: {latest_run.get('timestamp', 'unknown')}")
-                print(f"📋 Monitor status: {latest_run.get('monitor', {}).get('status', 'unknown')}")
-                
+                print(f"📋 Monitor status: {monitor.get('status', 'unknown')}")
                 if latest_run.get('diagnosis'):
                     diagnosis = latest_run['diagnosis']
+                    if isinstance(diagnosis, str):
+                        try:
+                            diagnosis = json.loads(diagnosis)
+                        except Exception:
+                            diagnosis = {'root_cause': str(diagnosis)}
                     print(f"🔍 Root cause: {diagnosis.get('root_cause', 'unknown')}")
                     print(f"🎯 Confidence: {diagnosis.get('confidence', 'unknown')}")
                     print(f"🛡️  Safety: {diagnosis.get('remediation_safety', 'unknown')}")
-                
                 if latest_run.get('fix'):
                     fix = latest_run['fix']
+                    if isinstance(fix, str):
+                        try:
+                            fix = json.loads(fix)
+                        except Exception:
+                            fix = {'status': str(fix)}
                     print(f"🔧 Fix status: {fix.get('status', 'unknown')}")
                     print(f"✅ Success: {fix.get('success', 'unknown')}")
-            
             return status
         else:
             print(f"❌ Failed to get status: {response.status_code}")
@@ -210,4 +228,4 @@ def main():
     print("="*60)
 
 if __name__ == "__main__":
-    main() 
+    main()

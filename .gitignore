@@ -195,3 +195,4 @@ cython_debug/
 frontend/node_modules/*
 self-healing-pipeline/*
 node_modules/*
+airflow/logs/scheduler/latest
