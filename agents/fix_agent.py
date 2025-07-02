@@ -92,6 +92,39 @@ class FixAgent:
 
     def _execute_fix(self, fix: str, failure: Dict[str, Any]) -> str:
         try:
+            import os, json
+            approval_state_path = os.path.join(os.path.dirname(__file__), '../backend/approval_state.json')
+            approval_dir = os.path.dirname(approval_state_path)
+            if not os.path.exists(approval_dir):
+                os.makedirs(approval_dir, exist_ok=True)
+            # Always check for any approved pending fix and apply it, regardless of current failure
+            try:
+                with open(approval_state_path, 'r') as f:
+                    approval_state = json.load(f)
+                if approval_state.get("approved") and approval_state.get("pending_fix"):
+                    # Patch the data file if possible
+                    data_path = os.path.join(os.path.dirname(__file__), '../data/sample_employees.json')
+                    with open(data_path, 'r') as f:
+                        employees = json.load(f)
+                    import re
+                    # Try to extract missing field from the last failure in approval_state
+                    failure_obj = approval_state.get("failure") or failure
+                    match = re.search(r"Missing required field '([a-zA-Z0-9_]+)'", failure_obj.get("error_message", ""))
+                    if match:
+                        missing_field = match.group(1)
+                        for emp in employees:
+                            if missing_field not in emp:
+                                emp[missing_field] = f"autofix_{missing_field}@example.com" if missing_field == "email" else f"autofix_{missing_field}"
+                        with open(data_path, 'w') as f:
+                            json.dump(employees, f, indent=2)
+                        logger.info(f"Patched missing field '{missing_field}' in sample_employees.json via FixAgent after approval.")
+                    # Reset approval state
+                    with open(approval_state_path, 'w') as f:
+                        json.dump({"pending_fix": None, "failure": None, "approved": False}, f)
+                    return f"Patched missing field after approval and reset approval state."
+            except Exception as e:
+                logger.error(f"Error applying approved fix: {e}")
+            # Existing logic for schema/type fixes
             if "schema" in fix:
                 return self._call_api("update_schema", failure)
             if "type conversion" in fix:
@@ -100,14 +133,41 @@ class FixAgent:
                 return self._call_api("add_missing_field", failure)
             if "retry" in fix:
                 return self._call_api("retry_task", failure)
-            return "No automated fix applied"
+            # If not handled above, always set a pending fix for human approval
+            try:
+                with open(approval_state_path, 'w') as f:
+                    json.dump({"pending_fix": fix, "failure": failure, "approved": False}, f)
+                logger.info(f"Stored pending fix for human approval: {fix}")
+                return f"Pending human approval: {fix}"
+            except Exception as e:
+                logger.error(f"Failed to store pending fix: {e}")
+                return f"Failed to store pending fix: {e}"
         except Exception as e:
             logger.error(f"Fix execution failed: {e}")
             return f"Error: {e}"
 
+    def _notify_manual_intervention(self, fix: str, failure: Dict[str, Any]) -> None:
+        try:
+            url = f"{self.flask_api_url}/api/notify"
+            payload = {"fix": fix, "failure": failure}
+            requests.post(url, json=payload, timeout=5)
+        except Exception as e:
+            logger.error(f"Failed to notify for manual intervention: {e}")
+
     def _call_api(self, action: str, failure: Dict[str, Any]) -> str:
-        url = f"{self.flask_api_url}/api/{action}"
-        resp = requests.post(url, json=failure, timeout=10)
-        if resp.status_code == 200:
-            return "Success"
-        return f"API error: {resp.status_code}"
+        """
+        Call the backend Flask API to perform a fix action.
+        """
+        import requests
+        import os
+        import json
+        try:
+            url = f"{self.flask_api_url}/api/fix_action"
+            payload = {"action": action, "failure": failure}
+            response = requests.post(url, json=payload, timeout=10)
+            response.raise_for_status()
+            logger.info(f"Called backend API for action '{action}': {response.text}")
+            return f"API call '{action}' successful: {response.text}"
+        except Exception as e:
+            logger.error(f"API call '{action}' failed: {e}")
+            return f"API call '{action}' failed: {e}"

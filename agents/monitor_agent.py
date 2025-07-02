@@ -24,7 +24,7 @@ class MonitorAgent:
     def __init__(self, api_base_url: str = "http://localhost:5000", openai_api_key: str = None):
         self.api_base_url = api_base_url
         self.failure_history: List[Dict[str, Any]] = []
-        self.alert_threshold = 1  # consecutive failures
+        self.alert_threshold = 3  # consecutive failures
         self.time_window = timedelta(hours=1)
         self.openai_api_key = openai_api_key
         self.llm = ChatOpenAI(model="gpt-4", temperature=0.1, api_key=openai_api_key) if CREWAI_AVAILABLE and openai_api_key else None

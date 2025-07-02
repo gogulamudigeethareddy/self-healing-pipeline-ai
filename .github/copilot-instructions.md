@@ -54,8 +54,9 @@ This document provides guidelines and best practices for using GitHub Copilot in
 
 ---
 
-## 7. Documentation
-- **Update Docs**: Update `ARCHITECTURE.md` and `SETUP_AND_RUN.md` when making significant changes.
+## 7. Documentation (Update)
+- **Update Docs**: Update `ARCHITECTURE.md`, `SETUP_AND_RUN.md`, and `README.md` when making significant changes, especially to the approval workflow or `approval_state.json` logic.
+- **Approval State**: If you change how human-in-the-loop approval is handled, update all documentation to reflect whether approval state is file-based or database-backed.
 - **Code Comments**: Use clear comments for complex logic.
 
 ---

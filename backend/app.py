@@ -5,6 +5,7 @@ from flask_cors import CORS
 from datetime import datetime
 import copy
 import enum
+import json
 
 # Import agents (assume these are implemented in ../agents/)
 import sys
@@ -37,6 +38,8 @@ fix_agent = FixAgent()
 # In-memory store for logs, status, feedback (for demo)
 pipeline_runs = []
 feedback_list = []
+
+approval_state_path = os.path.join(os.path.dirname(__file__), 'approval_state.json')
 
 def safe_dict(obj, _depth=0, _max_depth=10, _visited=None):
     """Helper function to recursively convert non-serializable objects to strings, with depth and cycle protection."""
@@ -118,10 +121,10 @@ def webhook():
         error_info['monitor_agent'] = str(e)
         logging.error(f"MonitorAgent error: {e}")
         monitor_result = {'error': str(e)}
-    # 2. If diagnosis triggered, run diagnosis and fix
+    # 2. If intervention triggered, run diagnosis and fix
     diagnosis_result = None
     fix_result = None
-    if monitor_result.get('diagnosis_triggered'):
+    if monitor_result.get('status') == 'intervention_triggered':
         try:
             t0 = time.time()
             diagnosis_result = diagnose_agent.diagnose_failure(data)
@@ -237,6 +240,18 @@ def rollback():
     # Simulate rollback (no-op for demo)
     return jsonify({'status': 'rolled back'})
 
+@app.route('/api/pending_fix', methods=['GET'])
+def api_pending_fix():
+    """Get the pending fix details, if any."""
+    return jsonify(get_pending_fix())
+
+@app.route('/api/approve_fix', methods=['POST'])
+def api_approve_fix():
+    """Approve the pending fix for application."""
+    state = approve_pending_fix()
+    # Here you could trigger the actual fix logic if needed
+    return jsonify(state)
+
 @app.route('/', methods=['GET'])
 def health_check():
     """Health check endpoint for root URL."""
@@ -247,6 +262,24 @@ def after_request(response):
     # Log every request to the log file and console
     logging.info(f"{request.remote_addr} - - [{datetime.now().strftime('%d/%b/%Y %H:%M:%S')}] \"{request.method} {request.path} {request.environ.get('SERVER_PROTOCOL')}\" {response.status_code} -")
     return response
+
+def set_pending_fix(fix_desc, failure):
+    with open(approval_state_path, 'w') as f:
+        json.dump({"pending_fix": fix_desc, "failure": failure, "approved": False}, f)
+
+def get_pending_fix():
+    try:
+        with open(approval_state_path, 'r') as f:
+            return json.load(f)
+    except Exception:
+        return {"pending_fix": None, "approved": False}
+
+def approve_pending_fix():
+    state = get_pending_fix()
+    state["approved"] = True
+    with open(approval_state_path, 'w') as f:
+        json.dump(state, f)
+    return state
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

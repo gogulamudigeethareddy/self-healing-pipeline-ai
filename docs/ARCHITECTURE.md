@@ -200,6 +200,10 @@ self-healing-pipeline-ai/
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Data Storage (Update)
+
+- **Approval State**: Human-in-the-loop approval state is stored in `backend/approval_state.json` as a JSON file. This file tracks the current pending fix, failure context, and approval status. No database is used for this state.
+
 ---
 
 ## 4. Agentic Workflow
@@ -237,7 +241,7 @@ def diagnose_failure(failure_data):
     7. Return diagnosis result
 ```
 
-### 4.3. Fix Agent Workflow
+### 4.3. Fix Agent Workflow (Update)
 ```python
 def apply_fix(diagnosis_result, failure_data):
     1. Evaluate diagnosis confidence and safety
@@ -250,6 +254,8 @@ def apply_fix(diagnosis_result, failure_data):
        - Update schema
        - Add transformation
        - Notify human
+       - If manual approval is required, store pending fix in approval_state.json
+       - After human approval, always check for and apply any approved fix in approval_state.json, then reset the approval state file
     4. Verify fix effectiveness
     5. Rollback if necessary
     6. Log all actions
