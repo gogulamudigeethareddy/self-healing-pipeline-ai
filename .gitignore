@@ -196,3 +196,4 @@ frontend/node_modules/*
 self-healing-pipeline/*
 node_modules/*
 airflow/logs/scheduler/latest
+airflow/logs/scheduler/latest
