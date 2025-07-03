@@ -124,6 +124,16 @@ class FixAgent:
                     return f"Patched missing field after approval and reset approval state."
             except Exception as e:
                 logger.error(f"Error applying approved fix: {e}")
+            # Force human approval for certain fixes
+            if ("manual intervention" in fix.lower()) or (fix.strip().lower() == "manual intervention required") or (not fix or fix.strip() == ""):
+                try:
+                    with open(approval_state_path, 'w') as f:
+                        json.dump({"pending_fix": fix, "failure": failure, "approved": False}, f)
+                    logger.info(f"Stored pending fix for human approval: {fix}")
+                    return f"Pending human approval: {fix}"
+                except Exception as e:
+                    logger.error(f"Failed to store pending fix: {e}")
+                    return f"Failed to store pending fix: {e}"
             # Existing logic for schema/type fixes
             if "schema" in fix:
                 return self._call_api("update_schema", failure)
