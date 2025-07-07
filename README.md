@@ -175,4 +175,3 @@ Welcome to the contributions! To get started:
 
 Please review existing issues and pull requests to avoid duplication. For major changes, open an issue first to discuss your proposal.
 
-- **Copilot Users**: Please review `.github/copilot-instructions.md` for workspace-specific Copilot usage guidelines before submitting code.
