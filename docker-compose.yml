@@ -7,6 +7,7 @@ services:
     container_name: airflow-webserver
     depends_on:
       - airflow-init
+    command: webserver
     environment:
       &airflow-common-env
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -48,6 +49,7 @@ services:
     container_name: airflow-scheduler
     depends_on:
       - airflow-webserver
+    command: scheduler
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
@@ -131,6 +133,34 @@ services:
         mkdir -p /sources/logs /sources/dags /sources/plugins /sources/config
         chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins,config}
         exec /entrypoint airflow version
+
+  # Backend (Flask API)
+  backend:
+    build:
+      context: ./backend
+    container_name: backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+    depends_on:
+      - postgres
+      - redis
+    restart: always
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+    restart: always
 
 volumes:
   postgres-db-volume:
