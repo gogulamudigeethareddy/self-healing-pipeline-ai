@@ -174,4 +174,3 @@ Welcome to the contributions! To get started:
 6. Open a pull request with a clear description of your changes.
 
 Please review existing issues and pull requests to avoid duplication. For major changes, open an issue first to discuss your proposal.
-
